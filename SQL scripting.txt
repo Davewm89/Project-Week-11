@@ -1,0 +1,56 @@
+import sqlite3
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+# Connect to SQLite database
+conn = sqlite3.connect('sentiment_data.db')
+cursor = conn.cursor()
+
+# Load data from database
+cursor.execute("SELECT review, rating FROM reviews")
+data = cursor.fetchall()
+
+# Preprocess data
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'\W', ' ', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text
+
+cleaned_data = [(clean_text(review), rating) for review, rating in data]
+
+# Split data into features and labels
+X = [review for review, _ in cleaned_data]
+y = [1 if rating > 3 else 0 for _, rating in cleaned_data]
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Create TF-IDF vectorizer
+tfidf_vectorizer = TfidfVectorizer()
+X_train_tfidf = tfidf_vectorizer.fit_transform(X_train)
+X_test_tfidf = tfidf_vectorizer.transform(X_test)
+
+# Train Logistic Regression model
+logreg_model = LogisticRegression(random_state=42)
+logreg_model.fit(X_train_tfidf, y_train)
+
+# Predict on test set
+y_pred = logreg_model.predict(X_test_tfidf)
+
+# Evaluate model
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+
+print("Accuracy:", accuracy)
+print("Classification Report:\n", report)
+
+# Store model parameters in database
+cursor.execute("INSERT INTO model_params (param_name, param_value) VALUES (?, ?)", ('coef_', logreg_model.coef_.tostring()))
+cursor.execute("INSERT INTO model_params (param_name, param_value) VALUES (?, ?)", ('intercept_', logreg_model.intercept_.tostring()))
+
+# Commit changes and close connection
+conn.commit()
+conn.close()
