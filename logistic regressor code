@@ -1,0 +1,22 @@
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression
+import numpy as np
+
+# Vectorizing the text data if not already done
+# vect = CountVectorizer()
+# X_train_vectorized = vect.fit_transform(X_train)
+
+# Training the logistic regression model
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
+
+# Evaluating the model on the test set
+accuracy = model.score(X_test, y_test)
+print(f'Test Accuracy: {accuracy:.2f}')
+
+# Displaying the model's coefficients
+feature_names = np.array(vect.get_feature_names_out())
+sorted_coef_index = model.coef_[0].argsort()
+print('Smallest Coefs:\n{}\n'.format(feature_names[sorted_coef_index[:10]]))
+print('Largest Coefs: \n{}'.format(feature_names[sorted_coef_index[:-11:-1]]))
